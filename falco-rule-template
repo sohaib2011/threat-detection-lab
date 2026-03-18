@@ -1,0 +1,7 @@
+# Basic Rule Structure
+
+rule: Rule Name
+desc: What this rule detects
+condition: <boolean expression>
+output: Message to log when triggered
+priority: CRITICAL
