@@ -1,0 +1,114 @@
+- rule: Unexpected HTTP Server Started
+  desc: Detect unexpected processes listening on HTTP ports
+  condition: >
+    evt.type=listen and
+    fd.l4proto=tcp and
+    fd.sport=80 and
+    not proc.name in (nginx, apache2, httpd)
+  output: >
+    Unexpected HTTP server started
+    (proc=%proc.name cmdline=%proc.cmdline)
+  priority: WARNING
+  tags: [http, persistence]
+
+- rule: Inbound HTTP Connection
+  desc: Detect processes making outbound HTTP connections
+  condition: >
+    evt.type=listen and
+    fd.l4proto=tcp and
+    fd.sport in (80, 443) 
+  output: >
+    Outbound HTTP connection (proc=%proc.name pid=%proc.pid
+    cmdline=%proc.cmdline dest=%fd.rip:%fd.rport)
+  priority: NOTICE
+  tags: [network, http]
+
+- rule: HTTP Client Tool Execution
+  desc: Detect curl or wget execution
+  condition: >
+    spawned_process and
+    (proc.name in (curl, wget))
+  output: >
+    HTTP client executed (proc=%proc.name user=%user.name
+    cmdline=%proc.cmdline)
+  priority: WARNING
+  tags: [http, download, execution]
+
+- rule: Privileged Access
+  desc: Detect execution of shell as root or with escalated privileges
+  condition: >
+    spawned_process and
+    (user.uid = 0 or container.privileged = true) and
+    (proc.name in (setfacl, getfacl, mount, umount, fusermount, crontab, at, pkexec, polkit-agent-helper-1))
+  output: "Privileged access (user=%user.name command=%proc.cmdline parent=%proc.pname pid=%proc.pid)"
+  priority: WARNING
+  tags: [security, privilege, shell]
+
+- rule: Privileged Access
+  desc: Detect execution of shell as root or with escalated privileges
+  condition: >
+    spawned_process and
+    (user.uid = 0 or container.privileged = true) and
+    (proc.name in (cat, nc, touch, bash, sh, zsh, ksh, csh, sudo, su, login, ssh, sshd, passwd, msfconsole))
+  output: "Privileged access (user=%user.name command=%proc.cmdline parent=%proc.pname pid=%proc.pid)"
+  priority: WARNING
+  tags: [security, privilege, shell]
+
+- rule: Privileged Access
+  desc: Detect execution of shell as root or with escalated privileges
+  condition: >
+    spawned_process and
+    (user.uid = 0 or container.privileged = true) and
+    (proc.name in (chage, newgrp, sg, useradd, userdel, usermod, groupadd, groupdel, groupmod, chown, chmod))
+  output: "Privileged access (user=%user.name command=%proc.cmdline parent=%proc.pname pid=%proc.pid)"
+  priority: WARNING
+  tags: [security, privilege, shell]
+
+- rule: Sensitive Privilege File Modification
+  desc: Detect modification of critical system authentication or privilege files
+  condition: >
+    open_write and
+    fd.name in (/etc/passwd, /etc/shadow, /etc/group, /etc/gshadow, /etc/sudoers)
+  output: >
+    Sensitive privilege file modified
+    (file=%fd.name command=%proc.cmdline user=%user.name pid=%proc.pid)
+  priority: CRITICAL
+  tags: [security, privilege, persistence]
+
+  - rule: Non-privileged user suspicious activity
+  desc: Detect when a non-root user runs system administration or network tools
+  condition: >
+    evt.type = execve and
+    user.uid >= 1000 and
+    (
+      proc.name in (ssh-keygen,touch, cat, msfconsole, bash, sh, zsh, ksh, nc, netcat, nmap, tcpdump, curl,>
+      or proc.cmdline contains "/etc/"
+      or proc.cmdline contains "apt" or proc.cmdline contains "dpkg"
+    )
+  output: >
+    Falco Alert: Non-privileged user ran suspicious command (user=%user.name
+    uid=%user.uid command=%proc.cmdline parent=%proc.pname)
+  priority: WARNING
+  tags: [user_activity, non_privileged, security]
+- macro: non_priv_user
+  condition: user.uid >= 1000
+
+  
+- rule: Non-privileged user executed command
+  desc: Capture every execve performed by non-root (UID >= 1000)
+  condition: evt.type = execve and non_priv_user
+  output:
+   Falco Non-Priv Command (ALL)  user=%user.name uid=%user.uid gid=user.gid
+   pid=%proc.pid proc=%proc.name cmdline=%proc.cmdline
+   fd.name=%fd.name
+  priority: NOTICE
+  tags: [user_activity, non_privileged, exec]
+
+- rule: Non-privileged interactive shell execution
+  desc: Detect when non-privileged users spawn interactive shells or shell-like programs
+  condition: evt.type = execve and non_priv_user and proc.name in (bash, sh, zsh, ksh, dash)
+  output: Non-priv shell user=%user.name uid=%user.uid proc=%proc.name cmdline=%proc.cmdline pid=%proc.pid
+  priority: NOTICE
+  tags: [user_activity, shells]
+
+
