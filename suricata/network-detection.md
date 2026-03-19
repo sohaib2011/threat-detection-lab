@@ -21,9 +21,20 @@ Our suricata rule will be simple, we want an alert to basically icmp requests (p
 alert icmp any any -> any any (msg:"ICMP Ping detected"; sid:1000001; rev:1;)
 
 
-Since this file was constructed by us, we  need to add file local.rule in .yaml file
+Since this file was constructed by us, we  need to add file local.rule in .yaml file, and change the default-rule path to /etc/suricata/rules
 
-<img width="584" height="313" alt="image" src="https://github.com/user-attachments/assets/228461a5-7462-4742-bc18-27b5c8d008cb" /> (pic of nano file, where i added local.rule)
+<img width="547" height="234" alt="image" src="https://github.com/user-attachments/assets/857a11ca-b275-4884-b4ee-938129f59ee5" /> 
 
 
+<img width="1259" height="281" alt="image" src="https://github.com/user-attachments/assets/c4b14c3e-8d3c-47c7-8f18-c10a0372271b" />
 
+We want to verify, alles gute! Just restart the suricata with systemctl SUDO restart suricata and we good
+
+
+Now to test if NIDS working, we will probe the alert
+<img width="681" height="693" alt="image" src="https://github.com/user-attachments/assets/cc49b152-90d5-4df6-8fa3-fa0db5fa983a" /> (commands)
+
+
+<img width="1696" height="142" alt="image" src="https://github.com/user-attachments/assets/5ac12351-55f8-4914-b1d8-c83f75aca992" /> (resultat av skannet)
+
+si den er litt treig og tar tid på registrere men hey vi klarte
